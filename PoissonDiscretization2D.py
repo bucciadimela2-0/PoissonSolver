@@ -31,30 +31,10 @@ class PoissonDiscretization2D:
             self.rho = rho
         else:
             raise ValueError("Shape of rho must be (Nx, Ny)")
+   
+   
     
-    #Discretizzazione dell'equazione di poisson
-    def discretize(self):
-        for i in range(self.num_iterations):
-            prev_phi = np.copy(self.phi)
 
-             # Iterazione dell'equazione di Poisson utilizzando il metodo delle differenze finite
-            for i in range(1, self.Nx - 1):
-                for j in range(1, self.Ny - 1):
-                    phi_xx = (self.phi[i + 1, j] - 2 * self.phi[i, j] + self.phi[i - 1, j]) / self.dx**2
-                    phi_yy = (self.phi[i, j + 1] - 2 * self.phi[i, j] + self.phi[i, j - 1]) / self.dy**2
-                    self.phi[i, j] = (phi_xx + phi_yy + self.rho[i, j] / self.epsilon_0) / 2
-
-             # Applicazione delle condizioni al contorno
-            if self.dirichlet_boundaries:
-                self.apply_dirichlet_boundary_conditions()
-            else:
-                 self.apply_neumann_boundary_conditions()
-
-             # Verifica della convergenza
-            if np.max(np.abs(self.phi - prev_phi)) < self.tolerance:
-                break
-
-        return self.phi
 
     def set_dirichlet_boundary(self, boundary, V):
         if boundary in ['bottom', 'top', 'left', 'right']:
@@ -79,3 +59,81 @@ class PoissonDiscretization2D:
         self.phi[-1, :] = self.phi[-2, :]
         self.phi[:, 0] = self.phi[:, 1]
         self.phi[:, -1] = self.phi[:, -2]
+
+
+    def discretize(self):
+        for i in range(self.Nx):
+            for j in range(self.Ny):
+                phi_xx = (self.phi[min(i+1, self.Nx-1), j] - 2 * self.phi[i, j] + self.phi[max(i-1, 0), j]) / self.dx**2
+                phi_yy = (self.phi[i, min(j+1, self.Ny-1)] - 2 * self.phi[i, j] + self.phi[i, max(j-1, 0)]) / self.dy**2
+                self.phi[i, j] = (phi_xx + phi_yy + self.rho[i, j] / self.epsilon_0) / 2
+        return self.phi
+
+  
+
+    def solve_gauss_seidel(self, grid):
+        self.phi = grid.copy()  # Utilizziamo la griglia fornita come punto di partenza
+
+        for iteration in range(self.num_iterations):
+            prev_phi = np.copy(self.phi)
+
+            for i in range(1, self.Nx - 1):
+                for j in range(1, self.Ny - 1):
+                    phi_xx = (self.phi[i + 1, j] - 2 * self.phi[i, j] + self.phi[i - 1, j]) / self.dx**2
+                    phi_yy = (self.phi[i, j + 1] - 2 * self.phi[i, j] + self.phi[i, j - 1]) / self.dy**2
+                    self.phi[i, j] = (phi_xx + phi_yy + self.rho[i, j] / self.epsilon_0) / 2
+
+            # Applica le condizioni di Dirichlet ai lati del dominio
+            self.apply_dirichlet_boundary_conditions()
+
+            # Verifica la convergenza
+            if np.max(np.abs(prev_phi - self.phi)) < self.tolerance:
+                print(f"Gauss-Seidel converged after {iteration + 1} iterations.")
+                break
+
+        return self.phi
+
+    def solve_jacobi(self, grid):
+        self.phi = grid.copy()  # Utilizziamo la griglia fornita come punto di partenza
+
+        for iteration in range(self.num_iterations):
+            prev_phi = np.copy(self.phi)
+
+            for i in range(1, self.Nx - 1):
+                for j in range(1, self.Ny - 1):
+                    phi_xx = (prev_phi[i + 1, j] - 2 * prev_phi[i, j] + prev_phi[i - 1, j]) / self.dx**2
+                    phi_yy = (prev_phi[i, j + 1] - 2 * prev_phi[i, j] + prev_phi[i, j - 1]) / self.dy**2
+                    self.phi[i, j] = (phi_xx + phi_yy + self.rho[i, j] / self.epsilon_0) / 2
+
+            # Applica le condizioni di Dirichlet ai lati del dominio
+            self.apply_dirichlet_boundary_conditions()
+
+            # Verifica la convergenza
+            if np.max(np.abs(prev_phi - self.phi)) < self.tolerance:
+                print(f"Jacobi converged after {iteration + 1} iterations.")
+                break
+
+        return self.phi
+
+    def solve_sor(self, grid, omega):
+            self.phi = grid.copy()  # Utilizziamo la griglia fornita come punto di partenza
+
+            for iteration in range(self.num_iterations):
+                prev_phi = np.copy(self.phi)
+
+                for i in range(1, self.Nx - 1):
+                    for j in range(1, self.Ny - 1):
+                        phi_xx = (prev_phi[i + 1, j] - 2 * prev_phi[i, j] + prev_phi[i - 1, j]) / self.dx**2
+                        phi_yy = (prev_phi[i, j + 1] - 2 * prev_phi[i, j] + prev_phi[i, j - 1]) / self.dy**2
+                        self.phi[i, j] = (1 - omega) * prev_phi[i, j] + omega * ((phi_xx + phi_yy + self.rho[i, j] / self.epsilon_0) / 2)
+
+                # Applica le condizioni di Dirichlet ai lati del dominio
+                self.apply_dirichlet_boundary_conditions()
+
+                # Verifica la convergenza
+                if np.max(np.abs(prev_phi - self.phi)) < self.tolerance:
+                    print(f"SOR (omega={omega}) converged after {iteration + 1} iterations.")
+                    break
+
+            return self.phi
+

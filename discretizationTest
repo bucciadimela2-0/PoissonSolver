@@ -1,0 +1,46 @@
+import unittest
+
+import numpy as np
+
+from PoissonDiscretization2D import PoissonDiscretization2D
+
+
+class TestFiniteDifferencePoissonSolver(unittest.TestCase):
+    def test_solver_with_uniform_density(self):
+        Nx = 100
+        Ny = 100
+        Lx = 100.0
+        Ly = 100.0
+        epsilon_0 = 8.854187817e-12  # Costante dielettrica del vuoto
+
+        solver = PoissonDiscretization2D(Nx, Ny, Lx, Ly, epsilon_0, 1000,1e-6)
+
+        # Imposta le condizioni al contorno
+        V_bottom = 0.0
+        V_top = 1.0
+        solver.set_dirichlet_boundary('bottom', V_bottom)
+        solver.set_dirichlet_boundary('top', V_top)
+
+        # Imposta la densità di carica (densità uniforme)
+        rho = np.ones((Nx, Ny))
+        solver.set_rho(rho)
+
+        # Risolvi l'equazione di Poisson
+        phi_solution = solver.discretize()
+
+        # Verifica che la soluzione sia una matrice Nx x Ny
+        self.assertEqual(phi_solution.shape, (Nx, Ny))
+        expected_row = np.full(Ny, V_bottom)
+        expected_row2 = np.full(Ny, V_top)
+        print(phi_solution[0, :])
+        print(expected_row)
+        print(phi_solution[-1, :])
+        print(expected_row2)
+
+        
+        # Verifica che i valori ai lati siano corretti utilizzando np.allclose()
+        self.assertTrue(np.allclose(phi_solution[0, :], expected_row))
+        self.assertTrue(np.allclose(phi_solution[-1, :],V_top ))
+
+if __name__ == '__main__':
+    unittest.main()
