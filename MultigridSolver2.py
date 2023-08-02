@@ -235,7 +235,7 @@ class MultigridSolver2:
         for v_iteration in range(v_cycle_iterations):
             
             print(f"Running V-cycle iteration {v_iteration + 1}/{v_cycle_iterations}...")
-            self.v_cycle(3, max_iterations, tolerance, rho)
+            self.v_cycle(2, max_iterations, tolerance, rho)
             
 
             
