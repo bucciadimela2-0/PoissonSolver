@@ -410,20 +410,27 @@ class Statistics:
         l=0
         for grid_size in grid_sizes:
 
+            print(grid_size)
+
+            print(grid_sizes)
+
             grid = np.zeros((grid_size, grid_size))
 
             nx = grid_size
             ny = grid_size
 
             solvers = PoissonDiscretization2D(nx, ny, self.Lx, self.Ly, self.epsilon_0, 100, 1e-10)
+            matrix_solvers = MultigridSolver2(grid_size, grid_size,self.Lx,self.Ly, 5,self.epsilon_0)
+
             sum = 0
             for j, method in enumerate(methods):
-                for i in range(100):
+                for i in range(10):
                     self.x_c = np.random.uniform(0, nx)
                     self.y_c = np.random.uniform(0, ny)
 
                     self.q = np.random.uniform(0, 100)
                     solvers.set_rho_function(self.random_charge_distribution)
+                    matrix_solvers.set_rho_function(self.random_charge_distribution)
 
                     
                     # Risolvi il problema per la griglia corrente
@@ -437,29 +444,29 @@ class Statistics:
                     # Calcola l'errore RMSE
                     rmse = np.sqrt(np.mean((V_known - V_num)**2))
                     sum += rmse
-                errors[j][l]= sum/100
-                l+=1
+                errors[j][l]= sum/10
+            l+=1
             
            # Lista di colori predefiniti
-            colors = ['red', 'green', 'blue', 'purple']
+        colors = ['red', 'green', 'blue', 'purple']
 
             # Creazione del grafico
-            for j in range(len(methods)):
+        for j in range(len(methods)):
                 # Verifica che ci siano dati nella lista errors[j] prima di plottare
                 
-                plt.plot(grid_sizes, errors[j], label=f'Metodo {j}', color=colors[j])
+            plt.plot(grid_sizes, errors[j], label=f'Metodo {j}', color=colors[j])
                
 
             # Aggiungi la legenda
-            plt.legend()
+        plt.legend()
 
             # Visualizza il grafico
-            plt.show()
+        plt.show()
 
 
             
 
-            return errors
+        return errors
             
 
 

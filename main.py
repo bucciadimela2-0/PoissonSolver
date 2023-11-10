@@ -29,7 +29,7 @@ if __name__ == "__main__":
     # Inizializza l'oggetto per le statistiche
     Stat = Statistics(Nx,Ny,Lx,Ly,epsilon_0,3,tolerance=1e-10)
 
-    grid_sizes = np.arange(100, 500, 10)
+    grid_sizes = np.arange(100, 500, 100)
     Stat.convergence_test(grid_sizes)
 
      # Esegui il test di complessità
