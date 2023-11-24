@@ -3,6 +3,7 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from mpl_toolkits.mplot3d import Axes3D
 
 from MultigridSolver2 import MultigridSolver2
 from PoissonDiscretization2D import PoissonDiscretization2D
@@ -14,9 +15,9 @@ class Statistics:
         self.Ny = Ny
         self.Lx = Lx
         self.Ly = Ly
-        self.x_c= 0
-        self.y_c= 0
-        self.q= 1
+        self.x_c= self.Lx/2.0
+        self.y_c= self.Ly/2.0
+        self.q=-1
         self.k=1
         self.epsilon_0 = epsilon_0
         self.num_iterations = num_iterations
@@ -106,9 +107,10 @@ class Statistics:
 
         """
 
-        x_center, y_center = self.Lx / 2.0, self.Ly / 2.0
+        x_center, y_center = self.Nx/2.0, self.Ny / 2.0
         r = np.sqrt((x - x_center)**2 + (y - y_center)**2)
         return np.where(r == 0, 1, 0)
+
 
     def exponential_charge(self, x, y):
         """
@@ -141,6 +143,7 @@ class Statistics:
         x_center, y_center = self.Lx / 2.0, self.Ly / 2.0
         r = np.sqrt((x - x_center)**2 + (y - y_center)**2)
         return np.where(np.logical_and(r >= 20, r <= 30), 1, 0)
+
 
     def random_charge_distribution(self, x, y ):
 
@@ -191,12 +194,22 @@ class Statistics:
         return self.k * self.q / np.sqrt((x - self.x_c)**2 + (y - self.y_c)**2)
 
 
-    def delta_charge(self, x, y):
-        """
-        Restituisce una distribuzione di carica puntiforme delta.
 
+
+    def charge_density(self, x, y):
         """
-        return self.q * np.where((x == self.x_c) & (y == self.y_c), 1, 0)
+        Calcola la densità di carica per una carica puntiforme approssimata con una gaussiana.
+
+        Args:
+        - x, y: Coordinate nel piano xy.
+        - q: Carica puntiforme.
+        - xc, yc: Coordinate del centro della gaussiana.
+        - sigma: Parametro di larghezza della gaussiana.
+
+        Returns:
+        - Densità di carica nel punto (x, y).
+        """
+        return self.q * np.exp(-((x - self.x_c)**2 + (y - self.y_c)**2) / (2 * 1**2))
 
     
     def known_potential(self, x, y):
@@ -223,6 +236,66 @@ class Statistics:
         rmse = np.sqrt(np.sum((V_known - V_num)**2) / N)
         return rmse
 
+    
+    def dipole_charge_density(self, x, y):
+        d = 1
+        delta_1 = self.q * np.exp(-(x - (self.x_c - d/2))**2 - (y - self.y_c)**2)
+        delta_2 = -self.q * np.exp(-(x - (self.x_c + d/2))**2 - (y - self.y_c)**2)
+        return delta_1 + delta_2
+
+
+    
+
+    
+    def calculate_electric_field(self, phi):
+
+        self.dx = self.Lx / (self.Nx - 1)
+        self.dy = self.Ly / (self.Ny - 1)
+        
+        dphi_dx, dphi_dy = np.gradient(phi, self.dx, self.dy)
+        Ex = -dphi_dx
+        Ey = -dphi_dy
+            
+        return Ex, Ey
+
+    
+    def plot_electric_solution(self):
+        solver = PoissonDiscretization2D(self.Nx, self.Ny, self.Lx, self.Ly,self.epsilon_0,self.num_iterations, self.tolerance)
+        
+        #solver.set_rho_function(self.gussian_charge)
+        solver.set_rho_function(self.dipole_charge_density)
+        # Risolvi l'equazione di Poisson
+        phi = solver.solve_jacobi(np.zeros((self.Nx, self.Ny)))
+        
+
+        # Calcola il campo elettrico
+        Ex, Ey = self.calculate_electric_field(phi)
+
+        # Plot dei risultati sovrapposti
+        x = np.linspace(0, self.Lx, self.Nx)
+        y = np.linspace(0, self.Ly, self.Ny)
+        X, Y = np.meshgrid(x, y)
+
+        
+
+        plt.figure(figsize=(8, 6))
+        
+        # Sovrapposizione del Potenziale Elettrico e Campo Elettrico
+        cbar = plt.contourf(X, Y, phi, cmap='viridis', levels=15, alpha=0.7)
+       
+
+        plt.streamplot(X,Y, Ey, Ex, color='white', linewidth=1, density=1, arrowstyle='->', arrowsize=1)
+
+
+
+        plt.title('Electric Potential and Electric Field')
+        plt.xlabel('X')
+        plt.ylabel('Y')
+
+        plt.colorbar(cbar, label='Electric Potential (V)')
+
+        plt.show()
+
 
     def sample_test(self):
 
@@ -231,11 +304,11 @@ class Statistics:
     
             
         # Set the current rho function
-            self.solver.set_rho_function(self.sin_cos_charge)
-            self.matrix_solver.set_rho_function(self.sin_cos_charge)
+            self.solver.set_rho_function(self.dipole_charge_density)
+            self.matrix_solver.set_rho_function(self.dipole_charge_density)
 
             # Discretize the Poisson equation to get the reference solution
-            phi_solution = self.solver.discretize()
+            
             fig, axs = plt.subplots(1, len(methods), figsize=(6*len(methods), 6), sharex=True, sharey=True)
 
             for j, method in enumerate(methods):
@@ -285,7 +358,7 @@ class Statistics:
         Mostra i grafici dei potenziali elettrici per diverse distribuzioni di carica e metodi di risoluzione.
         """
 
-        rho_functions = [self.surface_charge, self.delta_charge, self.annular_charge, self.gussian_charge,self.sin_cos_charge,self.radial_exp_charge, self.uniform_charge,self.linear_charge, self.ring_charge,self.point_charge,self.exponential_charge,self.spherical_charge, self.annular_charge, self.triangular_charge]
+        rho_functions = [self.sin_cos_charge,self.radial_exp_charge, self.uniform_charge,self.linear_charge, self.ring_charge, self.point_charge,self.exponential_charge]
         methods = [self.solver.solve_gauss_seidel, self.solver.solve_jacobi, lambda grid: self.solver.solve_sor(grid, 1.8), lambda grid: self.matrix_solver.solve_poisson_equation_2d(10,5)]
 
         
@@ -296,11 +369,11 @@ class Statistics:
         for i, rho_function in enumerate(rho_functions):
             fig, axs = plt.subplots(1, len(methods), figsize=(6*len(methods), 6), sharex=True, sharey=True)
 
-            # Set the current rho function
+            
             self.solver.set_rho_function(rho_function)
             self.matrix_solver.set_rho_function(rho_function)
 
-            # Discretize the Poisson equation to get the reference solution
+           
             phi_solution = self.solver.discretize()
 
             for j, method in enumerate(methods):
@@ -404,26 +477,29 @@ class Statistics:
             list: Lista degli errori RMSE.
         """
        
-        
-        methods = [self.solver.solve_gauss_seidel, self.solver.solve_jacobi, lambda grid: self.solver.solve_sor(grid, 1.8), lambda grid: self.matrix_solver.solve_poisson_equation_2d(10,5)]
+        solvers = PoissonDiscretization2D(self.Nx, self.Ny, self.Lx, self.Ly, self.epsilon_0, 100, 1e-10)
+        matrix_solvers = MultigridSolver2(self.Nx, self.Ny,self.Lx,self.Ly, 5 ,self.epsilon_0)
+
+        methods = [solvers.solve_gauss_seidel, solvers.solve_jacobi, lambda grid: solvers.solve_sor(grid, 1.8), lambda grid: matrix_solvers.solve_poisson_equation_2d(10,5)]
         errors = np.empty((len(methods), len(grid_sizes)))
         l=0
         for grid_size in grid_sizes:
 
-            print(grid_size)
-
-            print(grid_sizes)
+        
 
             grid = np.zeros((grid_size, grid_size))
 
             nx = grid_size
             ny = grid_size
 
-            solvers = PoissonDiscretization2D(nx, ny, self.Lx, self.Ly, self.epsilon_0, 100, 1e-10)
-            matrix_solvers = MultigridSolver2(grid_size, grid_size,self.Lx,self.Ly, 5,self.epsilon_0)
+            
 
             sum = 0
             for j, method in enumerate(methods):
+
+                solvers = PoissonDiscretization2D(nx, ny, self.Lx, self.Ly, self.epsilon_0, 100, 1e-10)
+                matrix_solvers = MultigridSolver2(nx, ny,self.Lx,self.Ly, 5 ,self.epsilon_0)
+                
                 for i in range(10):
                     self.x_c = np.random.uniform(0, nx)
                     self.y_c = np.random.uniform(0, ny)

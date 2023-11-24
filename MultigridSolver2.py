@@ -215,17 +215,11 @@ class MultigridSolver2:
                 if i == nx_coarse - 1:
                     fine_grid[2 * i + 1, 2 * j] = coarse_grid[i, j]
 
-        for i in range(nx_fine):
-            fine_grid[i, 0] = fine_grid[i, 1]
-            fine_grid[i, -1] = fine_grid[i, -2]
-    
-        for j in range(ny_fine):
-            fine_grid[0, j] = fine_grid[1, j]
-            fine_grid[-1, j] = fine_grid[-2, j]
+       
 
         return fine_grid
 
-    def solve_poisson_equation_2d(self, v_cycle_iterations=10, max_iterations=10, tolerance=1e-10, dirichlet_values=None):
+    def solve_poisson_equation_2d(self, v_cycle_iterations=10, max_iterations=10, tolerance=1e-100, dirichlet_values=None):
             """
             Risolve l'equazione di Poisson 2D utilizzando il metodo del ciclo V.
 
