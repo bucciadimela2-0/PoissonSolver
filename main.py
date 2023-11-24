@@ -12,8 +12,8 @@ from Statistics import Statistics
 if __name__ == "__main__":
 
     # Parametri del problema
-    Nx = 1000
-    Ny = 1000
+    Nx = 10
+    Ny = 10
     Lx = 10
     Ly = 10
     x_c = 5
